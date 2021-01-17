@@ -42,9 +42,9 @@ def load_csv_data():
 
     return None
 
-
 def clear_data():
     tv1.delete(*tv1.get_children())
+
 
 
 root = tk.Tk()
