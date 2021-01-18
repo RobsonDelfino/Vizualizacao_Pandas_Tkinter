@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import pandas as pd
 
 # Construções de classes
@@ -22,6 +22,43 @@ class Elemento():
         self.largura = largura
         self.pos_x = pos_x
         self.pos_y = pos_y
+
+
+class Janela(tk.Tk):
+    '''
+    Classe utilizada para instanciar cada janela da aplicação.
+    !Atenção! Suas instâncias não devem ser adicionadas na lista principal de execução do script
+    '''
+    def __init__(self, titulo, altura, largura, pos_x, pos_y, modo_abertura, redimensiona_x, redimensiona_y, icone):
+        '''
+        Método construtor
+        :param titulo: Título da janela. Espera-se uma string
+        :param altura: Altura da janela. Espera-se um inteiro ou uma string do tipo '500'
+        :param largura: Largura da janela. Espera-se um inteiro ou uma string do tipo '500'
+        :param pos_x: Posição da janela a partir da esquerda da tela. Espera-se um inteiro ou uma string do tipo '500'
+        :param pos_y: Posição da janela a partir do topo da tela. Espera-se um inteiro ou uma string do tipo '500'
+        :param modo_abertura: Modo de abertura. Espera-se as seguintes strings: 'normal', 'iconic' ou 'zoomed'
+        :param redimensiona_x: Permite ou não o redimensionamento da largura. Espera-se True ou False
+        :param redimensiona_y: Permite ou não o redimensionamento da altura. Espera-se True ou False
+        :param icone: Ícone da janela. Espera-se um caminho para um arquivo do tipo .ico
+        '''
+        self.titulo = titulo
+        self.altura = altura
+        self.largura = largura
+        self.pos_x = pos_x
+        self.pos_y = pos_y
+        self.modo_abertura = modo_abertura
+        self.redimensiona_x = redimensiona_x
+        self.redimensiona_y = redimensiona_y
+        self.icone = icone
+        # Gera a janela e altera seus atributos
+        self.widget = tk.Tk()
+        self.widget.title(self.titulo)
+        self.widget.geometry(str(self.largura) + 'x' + str(self.altura) + '+' + str(self.pos_x) + '+' + str(self.pos_y))
+        self.widget.state(self.modo_abertura)
+        self.widget.resizable(self.redimensiona_x, self.redimensiona_y)
+        self.widget.iconbitmap(self.icone)
+
 
 class Botao(Elemento):
     '''
@@ -80,6 +117,7 @@ class Botao(Elemento):
         else:
             raise AttributeError('Nenhum texto e nenhuma imagem foram passados para o botão')
 
+
 class Texto(Elemento):
     '''
     Classe utilizada para instanciar cada texto (widget Label) da aplicação
@@ -98,7 +136,6 @@ class Texto(Elemento):
                          height = self.altura,
                          width = self.largura,
                          text = self.texto)
-
 
     def renderizar(self):
         '''
@@ -133,6 +170,7 @@ class LabelFrame(Elemento):
         '''
         self.widget.place(x=self.pos_x, y=self.pos_y)
         return None
+
 
 class Tabela(Elemento):
     '''
@@ -203,50 +241,102 @@ class BarraDeMenus(Elemento):
             for tupla in menu_cascata: # Laço que percorre cada tupla de parâmetros de cada menu cascata
                 if tupla:
                     self.widget.add_command(label=item[0],comand=lambda: item[1]())
-                if tupla == (False, False, False):
+                if tupla == (False, False, False, False, False):
                     self.widget.add_separator()
         # Renderiza o menu
         self.widget.place(x=self.pos_x, y=self.pos_y, height=self.altura, width=self.largura)
         return None
 
+
 class MenuCascata(Elemento):
     '''
     Classe utilizada para instanciar cada menu cascata (widget Menu) da aplicação
-    !Atenção! Essa classe não tem método renderizar,
+    !Atenção! O método renderizar dessa classe não faz nada,
     pois seus elementos serão renderizados no método renderizar da classe BarraDeMenus
     '''
     def __init__(self, master, altura, largura, pos_x, pos_y, lista_submenus):
         '''
         Método construtor
-        :param lista_elementos: espera-se uma lista de tuplas , onde os primeiros elementos de cada tupla
+        :param lista_elementos: (rótulo, comando, ícone, status, submenu):
+                                espera-se uma lista de tuplas com 5 elementos,
+                                onde os primeiros elementos de cada tupla
                                 serão os rótulos de cada submenu, os segundos elementos de cada tupla
-                                serão os comandos de cada submenu (espera-se um método)
-                                e os terceiros elementos serão os ícones de cada submenu.
-                                Caso não se utilize ícone, definir o terceiro elemento da tupla como None.
-                                Em caso de separadores, utilizar (False, False, False) na tupla correspondente
+                                serão os comandos de cada submenu (espera-se um método),
+                                os terceiros elementos serão os ícones de cada submenu (False quando não for utilizar)
+                                os quartos elementos serão o status de cada submenu (True or False)
+                                e os quintos elementos serão submenus (False quando não tiver,
+                                ou objeto menu do tkinter quando tiver).
+                                Em caso de separadores, utilizar (False, False, False, False, False)
+                                na tupla correspondente
         '''
-        self.lista_submenus = lista_submenus
+        self.lista_menus = lista_submenus
         super().__init__(master, altura, largura, pos_x, pos_y)
+        # Criação do menu cascata
+        self.menu = tk.Menu(master=self.master, tearoff=False)
+        for elemento in self.lista_submenus:
+            if elemento:
+                self.menu.add_command(label = elemento[0],
+                                      command = elemento[1],
+                                      image = elemento[2],
+                                      compound = 'left' if elemento[2] else 'none',
+                                      state = 'active' if elemento[3] else 'disabled',
+                                      menu = elemento[4])
+            elif elemento == (False, False, False, False, False):
+                self.menu.add_separator()
+            else:
+                raise AttributeError('Atributos do submenu passados de forma errada')
 
-class BoxDeMensagem(Elemento):
+    def renderizar(self):
+        '''
+        Método necessário para que a execução do laço que renderiza no método main da aplicação não quebre
+        :return: None
+        '''
+        return None
+
+
+class BoxDeMensagem():
     '''
-    Classe utilizada para instanciar cada box de mensagem (widget messagebox) da aplicação
+    Classe utilizada para instanciar cada box de mensagem (widget messagebox) da aplicação.
+    Suas instâncias não devem ser adicionadas na lista principal de execução do script
     '''
-    def __init__(self, master, altura, largura, pos_x, pos_y, tipo, titulo, texto):
+    def __init__(self, tipo, titulo, texto):
         '''
         Método construtor
         :param tipo: recebe o tipo do box de mensagem. Pode ser 'I' (informação), 'A' (atenção),
                      'E' (erro), 'OC' (ok/cancela), 'TC' (tentar novamente/cancela),
-                     'SN' (sim/não), 'SNC' (sim/nãocancela).
-                     Qualquer valor além desses vai retornar um erro no momento da renderização em tela.
+                     'SN' (sim/não), 'SNC' (sim/não/cancela).
+                     Qualquer valor além desses vai retornar um erro no momento de chamar o elemento.
                      Espera-se uma string.
-        :param titulo: Título do box de mensagem
-        :param texto: Texto/pergunta do box de mensagem
+        :param titulo: Título do box de mensagem, espera-se um string
+        :param texto: Texto/pergunta do box de mensagem, espera-se uma string
         '''
         self.tipo = tipo
         self.titulo = titulo
         self.texto = texto
-        super().__init__(master, altura, largura, pos_x, pos_y)
+
+    def chamar_box(self):
+        '''
+        Método que chama os box de mensagens na tela
+        :return: A resposta de cada mensagem (True, False, None, 'ok')
+        '''
+        # Testa os tipos de box de mensagens de acordo com self.tipo
+        if self.tipo == 'I':
+            return messagebox.showinfo(title=self.titulo, message=self.texto)
+        elif self.tipo == 'A':
+            return messagebox.showwarning(title=self.titulo, message=self.texto)
+        elif self.tipo == 'E':
+            return messagebox.showerror(title=self.titulo, message=self.texto)
+        elif self.tipo == 'OC':
+            return messagebox.askokcancel(title=self.titulo, message=self.texto)
+        elif self.tipo == 'TC':
+            return messagebox.askretrycancel(title=self.titulo, message=self.texto)
+        elif self.tipo == 'SN':
+            return messagebox.askyesno(title=self.titulo, message=self.texto)
+        elif self.tipo == 'SNC':
+            return messagebox.askyesnocancel(title=self.titulo, message=self.texto)
+        else:
+            raise AttributeError(f'Atributo {self.tipo} não é um tipo válido')
+
 
 class Imagem(Elemento):
     '''
@@ -259,9 +349,23 @@ class Imagem(Elemento):
         '''
         self.caminho = caminho
         super().__init__(master, altura, largura, pos_x, pos_y)
+        self.imagem = tk.PhotoImage(file=caminho)
+        self.widget = tk.Label(master = self.master,
+                               height = self.altura,
+                               width = self.largura,
+                               image = self.imagem)
 
-'''janela = tk.Tk()
-janela.geometry('600x600')
+    def renderizar(self):
+        '''
+        Renderiza o elemento na tela de acordo com seus atributos
+        :return: None
+        '''
+        self.widget.place(x=self.pos_x, y=self.pos_y)
+        return None
+
+
+janela = tk.Tk()
+janela.geometry('800x800')
 lista = []
 for i in range(3):
     lista.append(Botao(janela, 2, 20, 50 + 10*(i + 1) + i*150, 40, f'Botão {i + 1}', janela.quit))
@@ -272,6 +376,7 @@ label1 = LabelFrame(janela, 300, 550, 25, 150, 'Sou lindo!')
 lista.append(label1)
 tabela = Tabela(label1.widget, 1, 1, 0, 0)
 lista.append(tabela)
+lista.append(Imagem(janela, 256, 256, 25, 500, 'icon.png'))
 
 for elemento in lista: elemento.renderizar()
 
@@ -279,4 +384,4 @@ df = pd.read_csv('titanic.csv')
 tabela.renderizar_tabela(df)
 
 janela.mainloop()
-'''
+
