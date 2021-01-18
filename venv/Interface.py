@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter.ttk import Treeview
+from tkinter import ttk
 import pandas as pd
 
 # Construções de classes
@@ -40,15 +40,9 @@ class Botao(Elemento):
         self.imagem = imagem
         self.ativo = ativo
         super().__init__(master, altura, largura, pos_x, pos_y)
-
-    def renderizar(self):
-        '''
-        Renderiza o elemento na tela de acordo com seus atributos
-        :return: None
-        '''
-        # Renderiza de forma diferente caso o botão seja somente texto, imagem e texto ou somente imagem
-        if self.imagem and self.texto:
-            botao = tk.Button(master = self.master,
+        # Cria o widget de acordo com os atributos texto e imagem
+        if self.imagem and self.texto: # Quando for passado texto e imagem
+            self.widget = tk.Button(master = self.master,
                               height = self.altura,
                               width = self.largura,
                               takefocus = True,
@@ -57,27 +51,31 @@ class Botao(Elemento):
                               image = self.imagem,
                               state = 'normal' if self.ativo else 'disabled',
                               command = lambda: self.comando())
-            botao.place(x=self.pos_x, y=self.pos_y)
-            return None
-        elif self.imagem and (self.texto == False):
-            botao = tk.Button(master = self.master,
+        elif self.imagem and (self.texto == False): # Quando for passado apenas imagem
+            self.widget = tk.Button(master = self.master,
                               height = self.altura,
                               width = self.largura,
                               takefocus = True,
                               state = 'normal' if self.ativo else 'disabled',
                               image = self.imagem,
                               command = lambda: self.comando())
-            botao.place(x=self.pos_x, y=self.pos_y)
-            return None
-        elif (self.imagem == False) and self.texto:
-            botao = tk.Button(master = self.master,
+        elif (self.imagem == False) and self.texto: # Quando for passado apenas texto
+            self.widget = tk.Button(master = self.master,
                               height = self.altura,
                               width = self.largura,
                               takefocus = True,
                               text = self.texto,
                               state = 'normal' if self.ativo else 'disabled',
                               command = lambda: self.comando())
-            botao.place(x=self.pos_x, y=self.pos_y)
+        else: self.widget = None # Quando não for passado texto nem imagem, vai gerar um erro na renderização
+
+    def renderizar(self):
+        '''
+        Renderiza o elemento na tela de acordo com seus atributos
+        :return: None
+        '''
+        if self.widget:
+            self.widget.place(x=self.pos_x, y=self.pos_y)
             return None
         else:
             raise AttributeError('Nenhum texto e nenhuma imagem foram passados para o botão')
@@ -96,17 +94,18 @@ class Texto(Elemento):
         self.texto = texto
         self.tam_fonte = tam_fonte
         super().__init__(master, altura, largura, pos_x, pos_y)
+        self.widget = tk.Label(master = self.master,
+                         height = self.altura,
+                         width = self.largura,
+                         text = self.texto)
+
 
     def renderizar(self):
         '''
         Renderiza o elemento na tela de acordo com seus atributos
         :return: None
         '''
-        label = tk.Label(master = self.master,
-                         height = self.altura,
-                         width = self.largura,
-                         text = self.texto)
-        label.place(x=self.pos_x, y=self.pos_y)
+        self.widget.place(x=self.pos_x, y=self.pos_y)
         return None
 
 
@@ -121,38 +120,100 @@ class LabelFrame(Elemento):
         '''
         self.rotulo = rotulo
         super().__init__(master, altura, largura, pos_x, pos_y)
+        self.widget = tk.LabelFrame(master=self.master,
+                                   height=self.altura,
+                                   width=self.largura,
+                                   text=self.rotulo)
+        self.widget.pack_propagate(False) # Define que o tamanho da LabelFrame não irá se moldar aos seus elementos
 
-class Treeview(Elemento):
+    def renderizar(self):
+        '''
+        Renderiza o elemento na tela de acordo com seus atributos
+        :return: None
+        '''
+        self.widget.place(x=self.pos_x, y=self.pos_y)
+        return None
+
+class Tabela(Elemento):
     '''
-    Classe utilizada para instanciar cada tabela (widget Treeview) da aplicação
+    Classe utilizada para instanciar cada tabela (widget Treeview) da aplicação.
+    Para melhor organização, usar um FrameLabel como master.
     '''
-    def __init__(self, master, altura, largura, pos_x, pos_y, data_frame=None):
+    def __init__(self, master, altura, largura, pos_x, pos_y):
         '''
         Método construtor
-        :param data_frame: recebe om objeto do tipo DataFrame, oriundo da biblioteca pandas,
-                           recebe None (vazio) por padrão
         '''
-        self.data_frame = data_frame
         super().__init__(master, altura, largura, pos_x, pos_y)
+        self.widget = ttk.Treeview(master=self.master)
+
+    def renderizar(self):
+        '''
+        Renderiza o elemento na tela de acordo com seus atributos
+        :return: None
+        '''
+        self.widget.place(relheight=self.altura, relwidth=self.largura)
+        # Insere as barras de rolagem na tabela
+        treescrollx = tk.Scrollbar(self.master, orient='horizontal', command=self.widget.xview)
+        treescrolly = tk.Scrollbar(self.master, orient='vertical', command=self.widget.yview)
+        self.widget.configure(xscrollcommand=treescrollx.set, yscrollcommand=treescrolly.set)
+        treescrollx.pack(side='bottom', fill='x')
+        treescrolly.pack(side='right', fill='y')
+        return None
+
+    def renderizar_tabela(self, data_frame):
+        '''
+        Renderiza a tabela dentro da instância (Treeview).
+        :param data_frame: deve ser um dataframe (objeto da biblioteca pandas)
+        :return: None
+        '''
+        self.widget.delete(*self.widget.get_children()) # limpa todos os dados pre-existentes na tabela
+        self.widget['columns'] = list(data_frame.columns)
+        self.widget['show'] = 'headings'
+        for coluna in self.widget['columns']:
+            self.widget.heading(coluna, text=coluna)
+        linhas = data_frame.to_numpy().tolist()
+        for linha in linhas:
+            self.widget.insert('', 'end', values=linha)
+        return None
+
 
 class BarraDeMenus(Elemento):
     '''
     Classe utilizada para instanciar cada barra de menu (widget Menu) da aplicação
     !ATENÇÃO! Utilizar somente para instanciar barras de menu, nunca menus cascata!
     '''
-    def __init__(self, master, altura, largura, pos_x, pos_y, lista_menus):
+    def __init__(self, master, altura, largura, pos_x, pos_y, *lista_menus):
         '''
         Método construtor
-        :param lista_menus: espera-se uma lista de tuplas , onde os primeiros elementos de cada tupla
-                            serão os rótulos de cada menu,
+        :param lista_menus: esperam-se listas de tuplas (tantas quantas forem as cascatas),
+                            onde os primeiros elementos de cada tupla serão os rótulos de cada menu,
                             e os segundos elementos de cada tupla serão objetos do tipo menu (widget Menu)
         '''
-        self.lista_menus = lista_menus
+        self.lista_menus = (*lista_menus,)
         super().__init__(master, altura, largura, pos_x, pos_y)
+        self.widget = tk.Menu(master=self.master)
+
+    def renderizar(self):
+        '''
+        Renderiza o elemento na tela de acordo com seus atributos
+        :return: None
+        '''
+        # Adiciona cada elemento ao menu, caso a tupla da lista seja (False, False, False), adiciona um separador
+        for menu_cascata in self.lista_menus: # Laço que percorre cada menu cascata da lista_menus
+            for tupla in menu_cascata: # Laço que percorre cada tupla de parâmetros de cada menu cascata
+                if tupla:
+                    self.widget.add_command(label=item[0],comand=lambda: item[1]())
+                if tupla == (False, False, False):
+                    self.widget.add_separator()
+        # Renderiza o menu
+        self.widget.place(x=self.pos_x, y=self.pos_y, height=self.altura, width=self.largura)
+        return None
 
 class MenuCascata(Elemento):
     '''
     Classe utilizada para instanciar cada menu cascata (widget Menu) da aplicação
+    !Atenção! Essa classe não tem método renderizar,
+    pois seus elementos serão renderizados no método renderizar da classe BarraDeMenus
     '''
     def __init__(self, master, altura, largura, pos_x, pos_y, lista_submenus):
         '''
@@ -199,7 +260,7 @@ class Imagem(Elemento):
         self.caminho = caminho
         super().__init__(master, altura, largura, pos_x, pos_y)
 
-janela = tk.Tk()
+'''janela = tk.Tk()
 janela.geometry('600x600')
 lista = []
 for i in range(3):
@@ -207,7 +268,15 @@ for i in range(3):
 
 for i in range(3):
     lista.append(Texto(janela, 2, 20, 50 + 10*(i + 1) + i*150, 100, f'Texto {i + 1}'))
+label1 = LabelFrame(janela, 300, 550, 25, 150, 'Sou lindo!')
+lista.append(label1)
+tabela = Tabela(label1.widget, 1, 1, 0, 0)
+lista.append(tabela)
 
 for elemento in lista: elemento.renderizar()
 
+df = pd.read_csv('titanic.csv')
+tabela.renderizar_tabela(df)
+
 janela.mainloop()
+'''
