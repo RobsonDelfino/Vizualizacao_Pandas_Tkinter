@@ -59,6 +59,9 @@ class Janela(tk.Tk):
         self.widget.resizable(self.redimensiona_x, self.redimensiona_y)
         self.widget.iconbitmap(self.icone)
 
+    def renderizar(self):
+        self.widget.mainloop()
+
 
 class Botao(Elemento):
     '''
@@ -363,8 +366,8 @@ class Imagem(Elemento):
         self.widget.place(x=self.pos_x, y=self.pos_y)
         return None
 
-
-janela = tk.Tk()
+# Todo o código abaixo é apenas para testar o que já foi feito e será removido da aplicação final
+'''janela = tk.Tk()
 janela.geometry('800x800')
 lista = []
 for i in range(3):
@@ -383,5 +386,8 @@ for elemento in lista: elemento.renderizar()
 df = pd.read_csv('titanic.csv')
 tabela.renderizar_tabela(df)
 
-janela.mainloop()
+janela.mainloop()'''
 
+'''janela = Janela('Minha Janela', 500, 1000, 100, 200, 'normal', False, False, 'icone.ico')
+janela.renderizar()
+'''
